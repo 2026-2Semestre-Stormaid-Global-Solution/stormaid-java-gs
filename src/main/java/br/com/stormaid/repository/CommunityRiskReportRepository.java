@@ -1,6 +1,7 @@
 package br.com.stormaid.repository;
 
 import br.com.stormaid.entity.CommunityRiskReport;
+import br.com.stormaid.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,4 +13,5 @@ import java.util.Optional;
 public interface CommunityRiskReportRepository extends JpaRepository<CommunityRiskReport, Long> {
     Page<CommunityRiskReport> findByRequesterId(Long requesterId, Pageable pageable);
     Optional<CommunityRiskReport> findByIdAndRequesterId(Long id, Long requesterId);
+    Page<CommunityRiskReport> findByRequester(User requester, Pageable pageable);
 }
