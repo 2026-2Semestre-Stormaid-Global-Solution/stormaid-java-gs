@@ -20,7 +20,6 @@ public class RagAnalysisService {
 
     @Transactional
     public IncidentAiAnalysis analyzeIncident(IncidentReport incident) {
-        // Criar registo inicial de análise pendente/em processamento
         IncidentAiAnalysis analysis = new IncidentAiAnalysis();
         analysis.setIncident(incident);
         analysis.setStatus(AiAnalysisStatus.PROCESSING);
@@ -38,7 +37,7 @@ public class RagAnalysisService {
                 analysis.setSummary("Relatório sem texto suficiente para análise contextual.");
             } else {
                 analysis.setStatus(AiAnalysisStatus.COMPLETED);
-                analysis.setSummary("Análise RAG concluída com base nas diretrizes de prevenção a desastres: " + reportText);
+                analysis.setSummary("Análise RAG concluída com base nas diretrizes de prevenção: " + reportText);
                 analysis.setModelName("spring-ai-default-model");
             }
 

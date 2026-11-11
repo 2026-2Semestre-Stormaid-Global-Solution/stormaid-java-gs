@@ -1,5 +1,6 @@
 package br.com.stormaid.service;
 
+import br.com.stormaid.ai.RagAnalysisService;
 import br.com.stormaid.dto.response.IncidentRegulationViewResponse;
 import br.com.stormaid.entity.IncidentReport;
 import br.com.stormaid.entity.User;
@@ -19,10 +20,14 @@ public class IncidentReportService {
 
     private final IncidentReportRepository incidentReportRepository;
     private final IncidentEventPublisher eventPublisher;
+    private final RagAnalysisService ragAnalysisService;
 
-    public IncidentReportService(IncidentReportRepository incidentReportRepository, IncidentEventPublisher eventPublisher) {
+    public IncidentReportService(IncidentReportRepository incidentReportRepository,
+                                 IncidentEventPublisher eventPublisher,
+                                 RagAnalysisService ragAnalysisService) {
         this.incidentReportRepository = incidentReportRepository;
         this.eventPublisher = eventPublisher;
+        this.ragAnalysisService = ragAnalysisService;
     }
 
     @Transactional
@@ -41,6 +46,11 @@ public class IncidentReportService {
 
         eventPublisher.publishIncidentCreated(saved);
 
+        try {
+            ragAnalysisService.analyzeIncident(saved);
+        } catch (Exception e) {
+        }
+
         return saved;
     }
 
@@ -55,7 +65,7 @@ public class IncidentReportService {
     }
 
     public IncidentRegulationViewResponse getRegulationView(Long id) {
-        br.com.stormaid.entity.IncidentReport incident = incidentReportRepository.findById(id)
+        IncidentReport incident = incidentReportRepository.findById(id)
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Ocorrência não encontrada com ID: " + id));
 
         IncidentRegulationViewResponse response = new IncidentRegulationViewResponse();
@@ -64,7 +74,6 @@ public class IncidentReportService {
         response.setChannelType(incident.getChannelType());
         response.setEmergencyCategory(incident.getEmergencyCategory());
         response.setTranscriptionStatus(incident.getTranscriptionStatus());
-
 
         if (incident.getLocation() != null) {
             IncidentRegulationViewResponse.LocationDto loc = new IncidentRegulationViewResponse.LocationDto();
@@ -88,6 +97,4 @@ public class IncidentReportService {
 
         return response;
     }
-
-
 }
