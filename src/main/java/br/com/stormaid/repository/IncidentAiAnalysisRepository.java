@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface IncidentAiAnalysisRepository extends JpaRepository<IncidentAiAnalysis, Long> {
-    List<IncidentAiAnalysis> findByIncidentIdOrderByCreatedAtDesc(Long incidentId);
+    List<IncidentAiAnalysis> findByIncidentId(Long incidentId);
 }
