@@ -5,10 +5,10 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -17,22 +17,28 @@ import java.io.IOException;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private TokenService tokenService;
+    private final TokenService tokenService;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+    public JwtAuthenticationFilter(TokenService tokenService, UserRepository userRepository) {
+        this.tokenService = tokenService;
+        this.userRepository = userRepository;
+    }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
-        var token = recoverToken(request);
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
+        String token = recoverToken(request);
+
         if (token != null) {
-            var login = tokenService.validateToken(token);
-            if (!login.isEmpty()) {
-                UserDetails user = userRepository.findByEmailIgnoreCase(login).orElse(null);
+            String login = tokenService.validateToken(token);
+            if (login != null && !login.isEmpty()) {
+                UserDetails user = userRepository.findByEmail(login).orElse(null);
                 if (user != null) {
-                    var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             }
@@ -41,11 +47,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String recoverToken(HttpServletRequest request) {
-        var authHeader = request.getHeader("Authorization");
-        if (authHeader == null) return null;
-        if (authHeader.startsWith("Bearer ")) {
-            return authHeader.replace("Bearer ", "");
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return null;
         }
-        return null;
+        return authHeader.replace("Bearer ", "");
     }
 }
