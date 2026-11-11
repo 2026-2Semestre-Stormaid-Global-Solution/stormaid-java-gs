@@ -1,6 +1,7 @@
 package br.com.stormaid.controller;
 
-import br.com.stormaid.entity.IncidentReport;
+import br.com.stormaid.dto.request.IncidentCreateRequest;
+import br.com.stormaid.dto.response.IncidentResponse;
 import br.com.stormaid.entity.User;
 import br.com.stormaid.service.IncidentReportService;
 import jakarta.validation.Valid;
@@ -22,29 +23,29 @@ public class IncidentReportController {
     }
 
     @PostMapping
-    public ResponseEntity<IncidentReport> create(
+    public ResponseEntity<IncidentResponse> create(
             @AuthenticationPrincipal User user,
-            @RequestBody @Valid IncidentReport incident
+            @RequestBody @Valid IncidentCreateRequest request
     ) {
-        IncidentReport created = incidentReportService.createIncident(user, incident);
+        IncidentResponse created = incidentReportService.createIncident(user, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @GetMapping
-    public ResponseEntity<Page<IncidentReport>> list(
+    public ResponseEntity<Page<IncidentResponse>> list(
             @AuthenticationPrincipal User user,
             Pageable pageable
     ) {
-        Page<IncidentReport> incidents = incidentReportService.listByRequester(user, pageable);
+        Page<IncidentResponse> incidents = incidentReportService.listByRequester(user, pageable);
         return ResponseEntity.ok(incidents);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<IncidentReport> getById(
+    public ResponseEntity<IncidentResponse> getById(
             @AuthenticationPrincipal User user,
             @PathVariable Long id
     ) {
-        IncidentReport incident = incidentReportService.findByIdAndRequester(id, user);
+        IncidentResponse incident = incidentReportService.findByIdAndRequester(id, user);
         return ResponseEntity.ok(incident);
     }
 }
