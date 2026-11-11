@@ -1,6 +1,6 @@
 # 🚨 StormAid API
 
-O StormAid é uma plataforma inteligente de gestão de emergências, zeladoria comunitária e resposta a catástrofes, integrando cidadãos, dependentes e socorristas institucionais através de uma arquitetura robusta e mensageria assíncrona.
+O **StormAid** é uma plataforma inteligente de gestão de emergências, zeladoria comunitária e resposta a catástrofes. A API integra cidadãos, dependentes e socorristas/reguladores institucionais através de uma arquitetura robusta em Spring Boot com segurança JWT, persistência em Oracle Database e mensageria assíncrona com RabbitMQ.
 
 ---
 
@@ -22,81 +22,168 @@ http://localhost:8080
 # 🔗 Link Youtube
 
 ```bash
-https://www.youtube.com/watch?v=OFF-OnubFsc
+LINK YOUTUBE
 ```
 ---
 
-# ⚙️ Como Configurar e Executar com Oracle / Flyway
+## ⚙️ Tecnologias e Configurações
 
-### 1. Pré-requisitos
-* Java JDK 21 instalada.
-* Acesso a uma instância do **Oracle Database** e servidor **RabbitMQ** ativo.
-
-### 2. Configuração de Variáveis de Ambiente
-Configure as seguintes variáveis no seu ambiente ou no arquivo de propriedades:
-* `ORACLE_URL`: `jdbc:oracle:thin:@//host:port/service`
-* `ORACLE_USER`: Seu usuário do banco
-* `ORACLE_PASSWORD`: Sua senha do banco
-* `JWT_SECRET`: Chave secreta para os tokens
-* `SPRING_RABBITMQ_HOST`: Endereço do servidor RabbitMQ
-* `SPRING_RABBITMQ_PORT`: Porta do RabbitMQ (ex: 5672)
-
-*(Nota: O projeto não possui um carregador específico de arquivo `.env`; o Spring lê as variáveis de ambiente diretamente).*
-
-### 3. Executando as Migrações
-O projeto utiliza o **Flyway** para gerenciar e versionar o banco de dados Oracle de forma automatizada ao iniciar a aplicação (scripts V1, V2 e V3).
+### Tecnologias Utilizadas
+- **Java 17 / 21** & **Spring Boot 3.2.x**
+- **Spring Security** com **JWT (JSON Web Token)**
+- **Oracle Database** (Ambiente Principal) & **H2 Database** (Ambiente de Testes)
+- **Flyway Migration** (Gerenciamento de Schemas SQL)
+- **RabbitMQ** (Mensageria para criação de incidentes)
+- **JUnit 5 / MockMvc** (Testes de Integração)
 
 ---
 
-# 💻 Como Iniciar a Aplicação
-Mac/Linux
-```bash
-chmod +x mvnw
-./mvnw spring-boot:run
-```
-Windows
-```bash
-.\mvnw.cmd spring-boot:run
-```
+## 🔐 Roles e Perfis de Acesso
+
+O sistema utiliza três perfis (roles) de autorização bem definidos:
+
+1. `CITIZEN`: Cidadão comum com permissão para gerenciar seu próprio perfil, cadastrar dependentes, registrar ocorrências de incidentes e relatos de riscos comunitários.
+2. `RESPONDER`: Socorrista institucional responsável pelo atendimento de emergências no local das ocorrências.
+3. `REGULATOR`: Agente regulador encarregado da triagem, verificação de credenciais e gestão estratégica de equipes de resposta.
+
 ---
 
-🧪 Executando os Testes Automatizados
-Mac/Linux
+## 🛠️ Configuração de Banco de Dados (Oracle & Flyway) e JWT
+
+### 1. Migrações de Banco de Dados (Flyway)
+As migrações SQL são executadas automaticamente na inicialização da aplicação em ambiente de produção/desenvolvimento Oracle:
+- `V1__create_stormaid_schema.sql`: Criação das tabelas base (`TB_STORMAID_USER`, `TB_STORMAID_USER_ROLE`, etc.).
+- `V2__seed_initial_data.sql`: Carga inicial de permissões e perfis padronizados.
+- `V3__...sql`: Ajustes finos de integridade e restrições.
+
+### 2. Variáveis de Ambiente
+Configure as seguintes variáveis no seu ambiente ou no `application.properties`:
+
+```properties
+# Base de Dados Oracle
+spring.datasource.url=jdbc:oracle:thin:@//localhost:1521/XE
+spring.datasource.username=seu_usuario
+spring.datasource.password=sua_senha
+spring.jpa.hibernate.ddl-auto=validate
+spring.flyway.enabled=true
+
+# Segurança JWT
+api.security.token.secret=${JWT_SECRET:sua_chave_secreta_jwt}
+
+# Mensageria RabbitMQ
+spring.rabbitmq.host=${RABBITMQ_HOST:localhost}
+spring.rabbitmq.port=${RABBITMQ_PORT:5672}
+spring.rabbitmq.username=${RABBITMQ_USER:guest}
+spring.rabbitmq.password=${RABBITMQ_PASS:guest}
+```
+
+---
+
+## 📬 Mensageria Assíncrona (RabbitMQ)
+
+A API do StormAid publica eventos assíncronos ao registrar novas ocorrências de incidentes:
+- **Fila/Routing Key**: `incident.created.v1`
+- **Exchange**: `stormaid.incidents`
+- **Payload**: Objeto JSON com dados brutos da ocorrência para consumo em tempo real por centrais de triagem dos socorristas.
+
+---
+
+## 🧪 Execução de Testes Automatizados
+
+Os testes de integração utilizam uma configuração isolada em memória com banco H2 (`src/test/resources/application.properties`), garantindo a execução rápida e sem dependência do ambiente Oracle local.
+
+### Como executar os testes via Maven:
+
+**Windows (PowerShell):**
+```powershell
+.\mvnw clean test
+```
+
+**Linux / macOS:**
 ```bash
 ./mvnw clean test
 ```
-Windows
-```bash
-.\mvnw.cmd clean test
+
+> **Status da Suíte de Testes**: `BUILD SUCCESS` (Testes de inicialização de contexto Spring Boot e bloqueio de acesso sem token JWT validados com status HTTP `403 Forbidden`).
+
+---
+
+## 💻 Como Executar a Aplicação
+
+**Windows:**
+```powershell
+.\mvnw.cmd spring-boot:run
 ```
+
+**Linux / macOS:**
+```bash
+./mvnw spring-boot:run
+```
+
 ---
 
-# 🏗️ Divisão da Arquitetura
-    Frontend (React Native / Web)
-    ├── Java Spring Boot -> Autenticação, Gestão Operacional, Incidentes e RabbitMQ
-    └── .NET -> Integração Comercial e Serviços de Apoio
-* JWT Cross-Platform: O token JWT gerado pelo backend Java é totalmente compatível e validado pelos microsserviços associados.
+## 📌 Endpoints da API
+
+### 🔐 1. Autenticação (`/auth`)
+
+| Método | Endpoint | Descrição | Acesso |
+|--------|----------|-----------|--------|
+| `POST` | `/auth/login` | Realiza o login na aplicação e retorna o token JWT | Público |
+| `POST` | `/auth/register` | Registro de novos usuários com role `CITIZEN` | Público |
+
 ---
 
-# 🔐 Roles e Perfis do Sistema
-    * CITIZEN (Cidadão)
-    * RESPONDER (Socorrista Institucional)
-    * ADMIN (Administrador do Sistema)
+### 👤 2. Perfil do Cidadão (`/api/v1/citizens`)
+
+| Método | Endpoint | Descrição | Acesso |
+|--------|----------|-----------|--------|
+| `GET` | `/api/v1/citizens/me/profile` | Retorna os dados do perfil do cidadão autenticado | `CITIZEN` |
+| `PUT` | `/api/v1/citizens/me/profile` | Atualiza o perfil do cidadão autenticado | `CITIZEN` |
+
 ---
 
-# 📅 Cronograma
+### 👨‍👩‍👧 3. Dependentes (`/api/v1/dependents`)
 
-| Atividade | Responsável | Data | Status |
-|--------|----------|------------|------------|
-| Implementação inicial da entidade User e AuthController | Manuelalacerda | 10/11 | Concluído |
-| Configuração do Swagger/OpenAPI e Segurança JWT | Manuelalacerda | 10/11 | Concluído |
-| Criação do módulo de Gestão de Dependentes (`DependentController`) | Manuelalacerda | 10/11 | Concluído |
-| Implementação do Perfil do Cidadão (`CitizenProfile`) | Manuelalacerda | 10/11 | Concluído |
-| Desenvolvimento do Registo de Incidentes (`IncidentReport`) | Manuelalacerda | 10/11 | Concluído |
-| Implementação da Zeladoria Comunitária (`CommunityRiskReport`) | Manuelalacerda | 10/11 | Concluído |
-| Criação dos Perfis de Socorristas e Autorização Institucional | Manuelalacerda | 10/11 | Concluído |
-| Configuração da Mensageria Assíncrona com RabbitMQ (`RabbitMQConfig`) | Manuelalacerda | 10/11 | Concluído |
-| Organização do Versionamento em Commits Separados por Camadas | Manuelalacerda | 10/11 | Concluído |
+| Método | Endpoint | Descrição | Acesso |
+|--------|----------|-----------|--------|
+| `GET` | `/api/v1/dependents` | Lista os dependentes associados ao cidadão autenticado | `CITIZEN` |
+| `POST` | `/api/v1/dependents` | Cadastra um novo dependente para o cidadão | `CITIZEN` |
+| `GET` | `/api/v1/dependents/{id}` | Busca os detalhes de um dependente por ID | `CITIZEN` |
+| `PUT` | `/api/v1/dependents/{id}` | Atualiza os dados de um dependente | `CITIZEN` |
+| `DELETE` | `/api/v1/dependents/{id}` | Remove o registro de um dependente | `CITIZEN` |
+
+---
+
+### 🚨 4. Ocorrências de Incidentes (`/api/v1/incidents`)
+
+| Método | Endpoint | Descrição | Acesso |
+|--------|----------|-----------|--------|
+| `GET` | `/api/v1/incidents` | Lista todas as ocorrências do cidadão | `CITIZEN` |
+| `POST` | `/api/v1/incidents` | Registra nova ocorrência (dispara evento `incident.created.v1`) | `CITIZEN` |
+| `GET` | `/api/v1/incidents/{id}` | Consulta detalhes de uma ocorrência específica | `CITIZEN`, `RESPONDER`, `REGULATOR` |
+
+---
+
+### 🛡️ 5. Relatos de Risco Comunitário (`/api/v1/community-risks`)
+
+| Método | Endpoint | Descrição | Acesso |
+|--------|----------|-----------|--------|
+| `GET` | `/api/v1/community-risks` | Lista os relatos de risco de zeladoria urbana | `CITIZEN`, `REGULATOR` |
+| `POST` | `/api/v1/community-risks` | Cadastra um novo relato de risco comunitário | `CITIZEN` |
+| `GET` | `/api/v1/community-risks/{id}` | Detalhes de um relato de risco específico | `CITIZEN`, `REGULATOR` |
+| `PUT` | `/api/v1/community-risks/{id}` | Atualiza as informações de um relato de risco | `CITIZEN` |
+| `DELETE` | `/api/v1/community-risks/{id}` | Remove um relato de risco cadastrado | `CITIZEN`, `REGULATOR` |
+
+---
+
+### 🚑 6. Perfil do Socorrista (`/api/v1/responders`)
+
+| Método | Endpoint | Descrição | Acesso |
+|--------|----------|-----------|--------|
+| `GET` | `/api/v1/responders/me/profile` | Retorna o perfil do socorrista autenticado | `RESPONDER` |
+| `GET` | `/api/v1/internal/responders` | Lista socorristas cadastrados | `REGULATOR` |
+| `GET` | `/api/v1/internal/responders/{id}` | Busca socorrista por ID | `REGULATOR` |
+| `PATCH` | `/api/v1/internal/responders/{id}/authorization` | Atualiza status de verificação/credenciamento | `REGULATOR` |
 
 ---
 
@@ -133,80 +220,3 @@ Windows
     </td>
   </tr>
 </table>
-
----
-
-# 🔐 1. Auth Controller (`/auth`)
-
-| Método | Endpoint | Descrição/Perfil de Acesso                         |
-|--------|----------|----------------------------------------------------|
-| POST | `/auth/login` | Realiza o login na aplicação e retorna o token JWT |
-| POST | `/auth/register` | Registo público de novos utilizadores              |
-
----
-LOGIN
-```bash
-{
-  "email": "cidadao@stormaid.com",
-  "password": "SenhaSegura123!"
-}
-```
----
-
-# 👤 2. Citizen Profile Controller (`/api/v1`)
-
-| Método | Endpoint | Descrição/Perfil de Acesso                      |
-|--------|----------|-------------------------------------------------|
-| GET | `/api/v1/citizens/me/profile` | Retorna o perfil detalhado do cidadão autenticado |
-| PUT | `/api/v1/citizens/me/profile` | Atualiza o perfil do cidadão autenticado        |
-
----
-
-# 👨‍👩‍👧 3. Dependent Controller (`/api/v1`)
-
-| Método | Endpoint | Descrição/Perfil de Acesso                   |
-|--------|----------|----------------------------------------------|
-| GET | `/api/v1/dependents` | Lista os dependentes associados ao cidadão   |
-| POST | `/api/v1/dependents` | Adiciona um novo dependente ao cidadão       |
-| GET | `/api/v1/dependents/{id}` | Busca um dependente específico pelo ID       |
-| PUT | `/api/v1/dependents/{id}` | Atualiza os dados de um dependente           |
-| DELETE | `/api/v1/dependents/{id}` | Remove um dependente do registo              |
-
----
-
-# 🚨 4. Incident Report Controller (`/api/v1`)
-
-| Método | Endpoint | Descrição/Perfil de Acesso                    |
-|--------|----------|-----------------------------------------------|
-| GET | `/api/v1/incidents` | Lista todas as ocorrências do cidadão         |
-| POST | `/api/v1/incidents` | Regista uma nova ocorrência (publica no RabbitMQ) |
-| GET | `/api/v1/incidents/{id}` | Consulta detalhes de uma ocorrência específica |
-
----
-
-# 🛡️ 5. Community Risk Report Controller (`/api/v1`)
-
-| Método | Endpoint | Descrição/Perfil de Acesso                     |
-|--------|----------|------------------------------------------------|
-| GET | `/api/v1/community-risks` | Lista os relatos de risco comunitário          |
-| POST | `/api/v1/community-risks` | Cria um novo relato de zeladoria comunitária   |
-| GET | `/api/v1/community-risks/{id}` | Detalhes de um relato de risco específico      |
-| PUT | `/api/v1/community-risks/{id}` | Atualiza um relato de risco comunitário        |
-| DELETE | `/api/v1/community-risks/{id}` | Remove um relato de risco                      |
-
----
-
-# 🚑 6. Responder Profile Controller (`/api/v1`)
-
-| Método | Endpoint | Descrição/Perfil de Acesso                      |
-|--------|----------|-------------------------------------------------|
-| GET | `/api/v1/responders/me/profile` | Retorna o perfil do socorrista autenticado      |
-| GET | `/api/v1/internal/responders` | Lista todos os socorristas (Acesso Restrito/Admin) |
-| GET | `/api/v1/internal/responders/{id}` | Busca socorrista por ID (Acesso Restrito/Admin)  |
-| PATCH | `/api/v1/internal/responders/{id}/authorization` | Atualiza o status de verificação/credenciamento |
-
----
-
-### 🗄 Modelo e Arquitetura
-
-A arquitetura do StormAid foi planeada para garantir resiliência e alta performance em cenários críticos de emergência, estruturando-se em camadas bem definidas (`config`, `controller`, `dto`, `entity`, `messaging`, `repository`, `service`).
