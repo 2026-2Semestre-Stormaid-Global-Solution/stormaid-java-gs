@@ -1,6 +1,7 @@
 package br.com.stormaid.messaging;
 
 import br.com.stormaid.config.RabbitMQConfig;
+import br.com.stormaid.dto.event.IncidentCreatedEvent;
 import br.com.stormaid.entity.IncidentReport;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
@@ -16,9 +17,19 @@ public class IncidentEventPublisher {
 
     public void publishIncidentCreated(IncidentReport incident) {
         try {
-            rabbitTemplate.convertAndSend(RabbitMQConfig.INCIDENT_CREATED_QUEUE, incident);
+            IncidentCreatedEvent event = new IncidentCreatedEvent(
+                    incident.getId(),
+                    incident.getRequester() != null ? incident.getRequester().getId() : null,
+                    incident.getRecipientType(),
+                    incident.getChannelType(),
+                    incident.getEmergencyCategory(),
+                    incident.getPublicStatus(),
+                    incident.getLocation(),
+                    incident.getCreatedAt()
+            );
+
+            rabbitTemplate.convertAndSend(RabbitMQConfig.INCIDENT_CREATED_QUEUE, event);
         } catch (Exception e) {
-            // Regista o erro de publicação mas não bloqueia o fluxo principal da API
             System.err.println("Erro ao publicar evento no RabbitMQ: " + e.getMessage());
         }
     }
